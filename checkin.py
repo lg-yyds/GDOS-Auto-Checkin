@@ -26,22 +26,24 @@ logging.basicConfig(
 logger = logging.getLogger("GLaDOS")
 
 # ==================== 配置 ====================
-CHECKIN_URL = "https://glados.cloud/api/user/checkin"
-STATUS_URL = "https://glados.cloud/api/user/status"
-POINTS_URL = "https://glados.cloud/api/user/points"
-EXCHANGE_URL = "https://glados.cloud/api/user/exchange"
+DOMAIN = "railgun.info"          # 目标域名
+CHECKIN_URL = f"https://{DOMAIN}/api/user/checkin"
+STATUS_URL  = f"https://{DOMAIN}/api/user/status"
+POINTS_URL  = f"https://{DOMAIN}/api/user/points"
+EXCHANGE_URL = f"https://{DOMAIN}/api/user/exchange"
+
 HEADERS_BASE = {
-    "origin": "https://glados.cloud",
-    "referer": "https://glados.cloud/console/checkin",
+    "origin": f"https://{DOMAIN}",
+    "referer": f"https://{DOMAIN}/console/checkin",
     "user-agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/120.0.0.0 Safari/537.36"
     ),
-    # 注意：使用 requests 的 json= 参数时会自动设置 Content-Type: application/json，
-    # 此处无需（也不应）手动设置 content-type，否则与 requests 默认行为重复。
 }
-PAYLOAD = {"token": "glados.cloud"}
+
+# 关键：token 必须是当前域名
+PAYLOAD = {"token": DOMAIN}
 TIMEOUT = (5, 15)  # (连接超时, 读取超时)
 MAX_RETRY = 3
 RETRY_MIN_WAIT = 2.0
