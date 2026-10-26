@@ -1,55 +1,30 @@
-name: GLaDOS Auto Checkin
+name: Railgun Daily Checkin
 
 on:
-  workflow_dispatch:  # 手动触发
   schedule:
-    - cron: '0 4 * * *'   # 每日 UTC 4 点签到（北京时间 12 点）
-    - cron: '0 0 1 * *'   # 每月 1 号保活空提交
+    - cron: '18 9,12 * * *'   # 北京时间约 17:18 和 20:18
+  workflow_dispatch:          # 支持手动触发
 
 jobs:
   checkin:
-    name: GLaDOS 签到
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    if: github.event_name != 'schedule' || github.event.schedule != '0 0 1 * *'
-    concurrency:
-      group: glados-checkin
-      cancel-in-progress: false
-
-    permissions:
-      contents: read
-
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Setup Python
-        uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-
+          python-version: '3.12'
       - name: Install dependencies
-        run: pip install "requests==2.32.3" --no-cache-dir
-
+        run: pip install requests
       - name: Run checkin
-        run: python checkin.py
         env:
-          COOKIES: ${{ secrets.COOKIES || vars.COOKIES }}
-          SENDKEY: ${{ secrets.SENDKEY }}
-          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
+          COOKIES: ${{ secrets.COOKIES }}
+          # 可选推送
+          SENDKEY: ${{ secrets.SENDKEY }}                 # PushDeer
+          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}   # Server酱
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
-          DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
-          DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}
-          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
-          FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
-          WECOM_BOT_WEBHOOK: ${{ secrets.WECOM_BOT_WEBHOOK }}
-          YUNHU_TOKEN: ${{ secrets.YUNHU_TOKEN }}
-          YUNHU_RECV_ID: ${{ secrets.YUNHU_RECV_ID }}
-          YUNHU_RECV_TYPE: ${{ secrets.YUNHU_RECV_TYPE }}
-          # #9 积分兑换计划（可选；不配置则默认不兑换，不影响现有签到）
-          EXCHANGE_PLAN: ${{ secrets.EXCHANGE_PLAN }}
-          GLADOS_EXCHANGE_PLAN: ${{ secrets.GLADOS_EXCHANGE_PLAN }}
+          EXCHANGE_PLAN: ${{ secrets.EXCHANGE_PLAN }}     # plan100 / plan200 / plan500
+        run: python checkin.py
 
   keepalive:
     name: 每月空提交保活
