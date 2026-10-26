@@ -2,30 +2,57 @@ name: Railgun Daily Checkin
 
 on:
   schedule:
-    - cron: '18 9,12 * * *'   # 北京时间约 17:18 和 20:18
+    - cron: '18 9,12 * * *'   # 每天签到（北京时间约 17:18 / 20:18）
+    - cron: '0 0 1 * *'       # 每月1号空提交保活
   workflow_dispatch:          # 支持手动触发
 
 jobs:
+  # ==================== 签到任务 ====================
   checkin:
+    name: Railgun 签到
+    if: github.event_name != 'schedule' || github.event.schedule != '0 0 1 * *'
     runs-on: ubuntu-latest
+    permissions:
+      actions: write          # 清理运行记录需要
+      contents: read
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
       - name: Install dependencies
         run: pip install requests
+
       - name: Run checkin
         env:
           COOKIES: ${{ secrets.COOKIES }}
-          # 可选推送
-          SENDKEY: ${{ secrets.SENDKEY }}                 # PushDeer
-          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}   # Server酱
+          SENDKEY: ${{ secrets.SENDKEY }}
+          SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-          EXCHANGE_PLAN: ${{ secrets.EXCHANGE_PLAN }}     # plan100 / plan200 / plan500
+          EXCHANGE_PLAN: ${{ secrets.EXCHANGE_PLAN }}
         run: python checkin.py
 
+      # ========== 清理旧的工作流运行记录 ==========
+      - name: 🧹 清理旧的工作流运行记录
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          runs=$(gh run list --workflow="${{ github.workflow }}" --limit=100 --json databaseId --jq '.[].databaseId')
+          count=0
+          for run_id in $runs; do
+            count=$((count + 1))
+            if [ $count -gt 1 ]; then
+              echo "删除运行记录: $run_id"
+              gh run delete $run_id || true
+            fi
+          done
+
+  # ==================== 每月空提交保活 ====================
   keepalive:
     name: 每月空提交保活
     if: github.event_name == 'schedule' && github.event.schedule == '0 0 1 * *'
@@ -34,15 +61,12 @@ jobs:
     concurrency:
       group: glados-keepalive
       cancel-in-progress: false
-
     permissions:
       contents: write
-
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 1
-
       - name: 创建空提交并推送
         run: |
           git config user.name "github-actions[bot]"
